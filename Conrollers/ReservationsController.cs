@@ -21,7 +21,17 @@ public class ReservationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        return Ok(await _context.Reservations.ToListAsync());
+        return Ok(await _context.Reservations
+                                .Include(r => r.MeetingRoom)
+                                .Select(r => new Reservation 
+                                { 
+                                    Id = r.Id,
+                                    MeetingRoomId = r.MeetingRoomId,
+                                    StartUtc = r.StartUtc,
+                                    EndUtc = r.EndUtc,
+                                    ReservedBy = r.ReservedBy,
+                                    MeetingRoom = _context.MeetingRooms.Where(m => m.Id == r.MeetingRoomId).FirstOrDefault() 
+                                }).ToListAsync());
     }
 
     [HttpGet("{id:guid}")]
@@ -40,7 +50,16 @@ public class ReservationsController : ControllerBase
 
         var reservations = await _context.Reservations
             .Where(r => r.MeetingRoomId == roomId)
-            .OrderBy(r => r.StartUtc)
+            .OrderBy(r => r.StartUtc).Include(r => r.MeetingRoom)
+            .Select(r => new Reservation
+            {
+                Id = r.Id,
+                MeetingRoomId = r.MeetingRoomId,
+                StartUtc = r.StartUtc,
+                EndUtc = r.EndUtc,
+                ReservedBy = r.ReservedBy,
+                MeetingRoom = _context.MeetingRooms.Where(m => m.Id == r.MeetingRoomId).FirstOrDefault()
+            })
             .ToListAsync();
 
         return Ok(reservations);

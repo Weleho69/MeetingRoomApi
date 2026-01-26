@@ -1,8 +1,8 @@
 ﻿## Työssä käytetty ilmaisversiota ChatGPT versio 5.2, www.chatgpt.com
 
-Generate a meeting room reservation api. 
-Use C# .NET Api with dotnet core 8. Create 5 meeting rooms, list their capacity and generate and list unique names for them. 
-implement basic CRUD functions, check that dates are not overlapping per room, can't be reserved in the past and start date is before the end date.
+### Generate a meeting room reservation api. 
+### Use C# .NET Api with dotnet core 8. Create 5 meeting rooms, list their capacity and generate and list unique names for them. 
+### implement basic CRUD functions, check that dates are not overlapping per room, can't be reserved in the past and start date is before the end date.
 
  
 > Nice, this is a clean, classic API problem. Below is a minimal but production-sane ASP.NET Core 8 Web API that:
@@ -28,126 +28,126 @@ implement basic CRUD functions, check that dates are not overlapping per room, c
 > 
 > Target framework in .csproj should be:
 > 
-> <TargetFramework>net8.0</TargetFramework>
+> >		 <TargetFramework>net8.0</TargetFramework>
 > 
 > 2. Models
 > Models/MeetingRoom.cs
->  > namespace MeetingRoomReservationApi.Models;
+>  >		 namespace MeetingRoomReservationApi.Models;
 >  > 
->  > public class MeetingRoom
->  > {
->  >     public Guid Id { get; set; } = Guid.NewGuid();
->  >     public string Name { get; set; } = string.Empty;
->  >     public int Capacity { get; set; }
->  > }
+>  >		 public class MeetingRoom
+>  >		 {
+>  >			public Guid Id { get; set; } = Guid.NewGuid();
+>  >			public string Name { get; set; } = string.Empty;
+>  >			public int Capacity { get; set; }
+>  >		 }
 > 
 > Models/Reservation.cs
->  > namespace MeetingRoomReservationApi.Models;
+>  >		 namespace MeetingRoomReservationApi.Models;
 >  > 
->  > public class Reservation
->  > {
->  >     public Guid Id { get; set; } = Guid.NewGuid();
->  >     public Guid MeetingRoomId { get; set; }
->  >     public DateTime StartUtc { get; set; }
->  >     public DateTime EndUtc { get; set; }
->  >     public string ReservedBy { get; set; } = string.Empty;
->  > }
+>  >			public class Reservation
+>  >			{
+>  >				public Guid Id { get; set; } = Guid.NewGuid();
+>  >				public Guid MeetingRoomId { get; set; }
+>  >				public DateTime StartUtc { get; set; }
+>  >				public DateTime EndUtc { get; set; }
+>  >			    public string ReservedBy { get; set; } = string.Empty;
+>  >			}
 > 
 > 3. In-Memory Data Store
 > Data/InMemoryStore.cs
->  > using MeetingRoomReservationApi.Models;
+>  >			using MeetingRoomReservationApi.Models;
 >  > 
->  > namespace MeetingRoomReservationApi.Data;
+>  >			namespace MeetingRoomReservationApi.Data;
 >  > 
->  > public static class InMemoryStore
->  > {
->  >     public static List<MeetingRoom> MeetingRooms { get; } =
->  >     [
->  >         new() { Name = "Orion", Capacity = 4 },
->  >         new() { Name = "Atlas", Capacity = 6 },
->  >         new() { Name = "Apollo", Capacity = 8 },
->  >         new() { Name = "Nova", Capacity = 10 },
->  >         new() { Name = "Zenith", Capacity = 12 }
->  >     ];
+>  >			public static class InMemoryStore 
+>  >			{
+>  >			  public static List<MeetingRoom> MeetingRooms { get; } =
+>  >			  [
+>  >			      new() { Name = "Orion", Capacity = 4 },
+>  >			      new() { Name = "Atlas", Capacity = 6 },
+>  >			      new() { Name = "Apollo", Capacity = 8 },
+>  >			      new() { Name = "Nova", Capacity = 10 },
+>  >			      new() { Name = "Zenith", Capacity = 12 }
+>  >			  ];
 >  > 
->  >     public static List<Reservation> Reservations { get; } = [];
->  > }
+>  >				public static List<Reservation> Reservations { get; } = [];
+>  >			}
 > 
 > 4. Validation Helper
 > Helpers/ReservationValidator.cs
->  > using MeetingRoomReservationApi.Data;
->  > using MeetingRoomReservationApi.Models;
+>  >		 using MeetingRoomReservationApi.Data;
+>  >		 using MeetingRoomReservationApi.Models;
 >  > 
->  > namespace MeetingRoomReservationApi.Helpers;
+>  >		 namespace MeetingRoomReservationApi.Helpers;
 >  > 
->  > public static class ReservationValidator
->  > {
->  >     public static void Validate(Reservation reservation)
->  >     {
->  >         if (reservation.StartUtc >= reservation.EndUtc)
->  >             throw new ArgumentException("Start date must be before end date.");
+>  >		 public static class ReservationValidator
+>  >			{
+>  >				public static void Validate(Reservation reservation)
+>  >				 {
+>  >			      if (reservation.StartUtc >= reservation.EndUtc)
+>  >			          throw new ArgumentException("Start date must be before end date.");
 >  > 
->  >         if (reservation.StartUtc < DateTime.UtcNow)
->  >             throw new ArgumentException("Reservations cannot be made in the past.");
+>  >			      if (reservation.StartUtc < DateTime.UtcNow)
+>  >			          throw new ArgumentException("Reservations cannot be made in the past.");
 >  > 
->  >         var overlaps = InMemoryStore.Reservations.Any(r =>
->  >             r.MeetingRoomId == reservation.MeetingRoomId &&
->  >             r.Id != reservation.Id &&
->  >             reservation.StartUtc < r.EndUtc &&
->  >             reservation.EndUtc > r.StartUtc
->  >         );
+>  >			      var overlaps = InMemoryStore.Reservations.Any(r =>
+>  >			          r.MeetingRoomId == reservation.MeetingRoomId &&
+>  >			          r.Id != reservation.Id &&
+>  >			          reservation.StartUtc < r.EndUtc &&
+>  >			          reservation.EndUtc > r.StartUtc
+>  >			      );
 >  > 
->  >         if (overlaps)
->  >             throw new ArgumentException("Reservation overlaps with an existing reservation.");
->  >     }
->  > }
+>  >			      if (overlaps)
+>  >			          throw new ArgumentException("Reservation overlaps with an existing reservation.");
+>  >			  }
+>  >		 }
 > 
 > 5. Controllers
 > Controllers/MeetingRoomsController.cs
-> > using MeetingRoomReservationApi.Data;
-> > using Microsoft.AspNetCore.Mvc;
+> >		 using MeetingRoomReservationApi.Data;
+> >		 using Microsoft.AspNetCore.Mvc;
 > > 
-> > namespace MeetingRoomReservationApi.Controllers;
+> >		 namespace MeetingRoomReservationApi.Controllers;
 > > 
-> > [ApiController]
-> > [Route("api/meeting-rooms")]
-> > public class MeetingRoomsController : ControllerBase
-> > {
-> >     [HttpGet]
-> >     public IActionResult GetAll()
-> >     {
-> >         return Ok(InMemoryStore.MeetingRooms);
-> >     }
-> > }
+> >		 [ApiController]
+> >		 [Route("api/meeting-rooms")]
+> >		 public class MeetingRoomsController : ControllerBase
+> >		 {
+> >			[HttpGet]
+> >			public IActionResult GetAll()
+> >			{
+> >			    return Ok(InMemoryStore.MeetingRooms);
+> >			}
+> >		 }
 > > 
-> > Controllers/ReservationsController.cs
-> > using MeetingRoomReservationApi.Data;
-> > using MeetingRoomReservationApi.Helpers;
-> > using MeetingRoomReservationApi.Models;
-> > using Microsoft.AspNetCore.Mvc;
+> >		 Controllers/ReservationsController.cs
+> >		 using MeetingRoomReservationApi.Data;
+> >		 using MeetingRoomReservationApi.Helpers;
+> >		 using MeetingRoomReservationApi.Models;
+> >		 using Microsoft.AspNetCore.Mvc;
 > > 
-> > namespace MeetingRoomReservationApi.Controllers;
+> >		 namespace MeetingRoomReservationApi.Controllers;
 > > 
-> > [ApiController]
-> > [Route("api/reservations")]
-> > public class ReservationsController : ControllerBase
-> > {
-> >     [HttpGet]
-> >     public IActionResult GetAll()
-> >     {
-> >         return Ok(InMemoryStore.Reservations);
-> >     }
+> >		 [ApiController]
+> >		 [Route("api/reservations")]
+> >		 public class ReservationsController : ControllerBase
+> >		 {
+> >			[HttpGet]
+> >			public IActionResult GetAll()
+> >			{
+> >			    return Ok(InMemoryStore.Reservations);
+> >			}
 > > 
-> >     [HttpGet("{id:guid}")]
-> >     public IActionResult Get(Guid id)
-> >     {
-> >         var reservation = InMemoryStore.Reservations.FirstOrDefault(r => r.Id == id);
-> >         return reservation is null ? NotFound() : Ok(reservation);
-> >     }
+> >			[HttpGet("{id:guid}")]
+> >			public IActionResult Get(Guid id)
+> >			{
+> >			    var reservation = InMemoryStore.Reservations.FirstOrDefault(r => r.Id == id);
+> >			    return reservation is null ? NotFound() : Ok(reservation);
+> >			}
 > > 
-> >     [HttpPost]
-> >     public IActionResult Create(Reservation reservation)
-> >     {
+> >			[HttpPost]
+> >			public IActionResult Create(Reservation reservation)
+> >			{
 > >         try
 > >         {
 > >             ReservationValidator.Validate(reservation);
@@ -158,76 +158,76 @@ implement basic CRUD functions, check that dates are not overlapping per room, c
 > >         {
 > >             return BadRequest(ex.Message);
 > >         }
-> >     }
+> >			}
 > > 
-> >     [HttpPut("{id:guid}")]
-> >     public IActionResult Update(Guid id, Reservation updated)
-> >     {
-> >         var existing = InMemoryStore.Reservations.FirstOrDefault(r => r.Id == id);
-> >         if (existing is null) return NotFound();
+> >			[HttpPut("{id:guid}")]
+> >			public IActionResult Update(Guid id, Reservation updated)
+> >			{
+> >			    var existing = InMemoryStore.Reservations.FirstOrDefault(r => r.Id == id);
+> >			    if (existing is null) return NotFound();
 > > 
-> >         updated.Id = id;
+> >			    updated.Id = id;
 > > 
-> >         try
-> >         {
-> >             ReservationValidator.Validate(updated);
+> >			    try
+> >			    {
+> >			        ReservationValidator.Validate(updated);
 > > 
-> >             existing.MeetingRoomId = updated.MeetingRoomId;
-> >             existing.StartUtc = updated.StartUtc;
-> >             existing.EndUtc = updated.EndUtc;
-> >             existing.ReservedBy = updated.ReservedBy;
+> >			        existing.MeetingRoomId = updated.MeetingRoomId;
+> >			        existing.StartUtc = updated.StartUtc;
+> >			        existing.EndUtc = updated.EndUtc;
+> >			        existing.ReservedBy = updated.ReservedBy;
 > > 
-> >             return NoContent();
-> >         }
-> >         catch (ArgumentException ex)
-> >         {
-> >             return BadRequest(ex.Message);
-> >         }
-> >     }
+> >			        return NoContent();
+> >			    }
+> >			    catch (ArgumentException ex)
+> >			    {
+> >			        return BadRequest(ex.Message);
+> >			    }
+> >			}
 > > 
-> >     [HttpDelete("{id:guid}")]
-> >     public IActionResult Delete(Guid id)
-> >     {
-> >         var reservation = InMemoryStore.Reservations.FirstOrDefault(r => r.Id == id);
-> >         if (reservation is null) return NotFound();
+> >			[HttpDelete("{id:guid}")]
+> >			public IActionResult Delete(Guid id)
+> >			{
+> >			    var reservation = InMemoryStore.Reservations.FirstOrDefault(r => r.Id == id);
+> >			    if (reservation is null) return NotFound();
 > > 
-> >         InMemoryStore.Reservations.Remove(reservation);
-> >         return NoContent();
-> >     }
-> > }
+> >			    InMemoryStore.Reservations.Remove(reservation);
+> >			    return NoContent();
+> >			}
+> >		 }
 > 
 > 6. Program.cs
 > 
 > Nothing fancy needed—default is fine:
 > 
-> > var builder = WebApplication.CreateBuilder(args);
+> >	 var builder = WebApplication.CreateBuilder(args);
 > > 
-> > builder.Services.AddControllers();
-> > builder.Services.AddEndpointsApiExplorer();
-> > builder.Services.AddSwaggerGen();
+> >	 builder.Services.AddControllers();
+> >	 builder.Services.AddEndpointsApiExplorer();
+> >	 builder.Services.AddSwaggerGen();
 > > 
-> > var app = builder.Build();
+> >	 var app = builder.Build();
 > > 
-> > app.UseSwagger();
-> > app.UseSwaggerUI();
+> >	 app.UseSwagger();
+> >		app.UseSwaggerUI();
 > > 
-> > app.UseHttpsRedirection();
-> > app.MapControllers();
+> >	 app.UseHttpsRedirection();
+> >	 app.MapControllers();
 > > 
-> > app.Run();
+> >	 app.Run();
 > 
 > 7. Example API Usage
 > List meeting rooms
-> GET /api/meeting-rooms
+> >		GET /api/meeting-rooms
 > 
 > Create reservation
-> POST /api/reservations
-> {
->   "meetingRoomId": "ROOM_GUID_HERE",
->   "startUtc": "2026-02-01T10:00:00Z",
->   "endUtc": "2026-02-01T11:00:00Z",
->   "reservedBy": "Alice"
-> }
+> >		POST /api/reservations
+> >	{
+> >		"meetingRoomId": "ROOM_GUID_HERE",
+> >		"startUtc": "2026-02-01T10:00:00Z",
+> >		"endUtc": "2026-02-01T11:00:00Z",
+> >		"reservedBy": "Alice"
+> >	}
 > 
 > What you could add next (if you want)
 > 
@@ -253,7 +253,7 @@ implement basic CRUD functions, check that dates are not overlapping per room, c
 > 
 > Just say the word 👌
 
-Add reservation listing by room
+### Add reservation listing by room
 
 > Easy add 👍 — we’ll expose a filter endpoint that lists reservations for a specific meeting room (optionally sorted by start time).
 > 
@@ -264,9 +264,9 @@ Add reservation listing by room
 > 
 > Add this new GET endpoint:
 > 
-> > [HttpGet("by-room/{roomId:guid}")]
-> > public IActionResult GetByRoom(Guid roomId)
-> > {
+> >	 [HttpGet("by-room/{roomId:guid}")]
+> >	 public IActionResult GetByRoom(Guid roomId)
+> >	 {
 > >     var roomExists = InMemoryStore.MeetingRooms.Any(r => r.Id == roomId);
 > >     if (!roomExists)
 > >         return NotFound("Meeting room not found.");
@@ -277,25 +277,25 @@ Add reservation listing by room
 > >         .ToList();
 > > 
 > >     return Ok(reservations);
-> > }
+> >	 }
 > 
 > 2. Resulting API Endpoints
 > List all reservations
-> > GET /api/reservations
+> >	 GET /api/reservations
 > 
 > List reservations for a specific room
-> > GET /api/reservations/by-room/{roomId}
+> >	 GET /api/reservations/by-room/{roomId}
 > 
 > 
 > Example:
 > 
-> > GET /api/reservations/by-room/9f3c2c1a-5c1f-4d61-8c1b-22d0f5a18b2a
+> >	 GET /api/reservations/by-room/9f3c2c1a-5c1f-4d61-8c1b-22d0f5a18b2a
 > 
 > 3. Optional (Nice-to-have): Include Room Info in Response
 > 
 > If you want the response to return room name + capacity alongside reservations, add a projection:
 > 
-> > var reservations = InMemoryStore.Reservations
+> >	 var reservations = InMemoryStore.Reservations
 > >     .Where(r => r.MeetingRoomId == roomId)
 > >     .OrderBy(r => r.StartUtc)
 > >     .Select(r => new
@@ -309,20 +309,20 @@ Add reservation listing by room
 > >     .ToList();
 > 
 > 4. Example Response
-> > [
-> >   {
-> >     "id": "d8caa6c1-8fd4-4b61-9ef4-bf3c6d4a0a77",
-> >     "startUtc": "2026-02-01T10:00:00Z",
-> >     "endUtc": "2026-02-01T11:00:00Z",
-> >     "reservedBy": "Alice"
-> >   },
-> >   {
-> >     "id": "a2f73f14-d29f-4b8f-b46f-59f5d87e1a21",
-> >     "startUtc": "2026-02-01T13:00:00Z",
-> >     "endUtc": "2026-02-01T14:00:00Z",
-> >     "reservedBy": "Bob"
-> >   }
-> > ]
+> >	 [
+> >	   {
+> >	     "id": "d8caa6c1-8fd4-4b61-9ef4-bf3c6d4a0a77",
+> >	     "startUtc": "2026-02-01T10:00:00Z",
+> >	     "endUtc": "2026-02-01T11:00:00Z",
+> >	     "reservedBy": "Alice"
+> >	   },
+> >	   {
+> >	     "id": "a2f73f14-d29f-4b8f-b46f-59f5d87e1a21",
+> >	     "startUtc": "2026-02-01T13:00:00Z",
+> >	     "endUtc": "2026-02-01T14:00:00Z",
+> >	     "reservedBy": "Bob"
+> >	   }
+> >	 ]
 > 
 > Why this design works well
 > 
@@ -342,7 +342,7 @@ Add reservation listing by room
 > 
 > Just tell me what direction you want 🚀
 
-Local database that permanently saves reservations
+### Local database that permanently saves reservations
 
 > Perfect — this is the real step from demo → real app 💪
 > We’ll move from EF InMemory to a local persistent database using SQLite, which:
@@ -361,116 +361,116 @@ Local database that permanently saves reservations
 > Data lost on restart	Data persists on disk
 > No migrations	Migrations supported
 > 1. Install Required Packages
-> > dotnet add package Microsoft.EntityFrameworkCore.Sqlite
-> > dotnet add package Microsoft.EntityFrameworkCore.Tools
+> >	 dotnet add package Microsoft.EntityFrameworkCore.Sqlite
+> >	 dotnet add package Microsoft.EntityFrameworkCore.Tools
 > 
 > 2. Update Program.cs
 > 
 > Replace the InMemory setup with SQLite.
 > 
 > Program.cs
-> > using MeetingRoomReservationApi.Data;
-> > using Microsoft.EntityFrameworkCore;
-> > 
-> > var builder = WebApplication.CreateBuilder(args);
-> > 
-> > builder.Services.AddControllers();
-> > builder.Services.AddEndpointsApiExplorer();
-> > builder.Services.AddSwaggerGen();
-> > 
-> > builder.Services.AddDbContext<AppDbContext>(options =>
-> >     options.UseSqlite("Data Source=meetingrooms.db"));
-> > 
-> > var app = builder.Build();
-> > 
-> > // Ensure database + seed data
-> > using (var scope = app.Services.CreateScope())
-> > {
-> >     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-> >     db.Database.Migrate();
-> >     DbSeeder.Seed(db);
-> > }
-> > 
-> > app.UseSwagger();
-> > app.UseSwaggerUI();
-> > 
-> > app.UseHttpsRedirection();
-> > app.MapControllers();
-> > 
-> > app.Run();
+> >	 using MeetingRoomReservationApi.Data;
+> >	 using Microsoft.EntityFrameworkCore;
+> >	 
+> >	 var builder = WebApplication.CreateBuilder(args);
+> >	 
+> >	 builder.Services.AddControllers();
+> >	 builder.Services.AddEndpointsApiExplorer();
+> >	 builder.Services.AddSwaggerGen();
+> >	 
+> >	 builder.Services.AddDbContext<AppDbContext>(options =>
+> >	     options.UseSqlite("Data Source=meetingrooms.db"));
+> >	 
+> >	 var app = builder.Build();
+> >	 
+> >	 // Ensure database + seed data
+> >	 using (var scope = app.Services.CreateScope())
+> >	 {
+> >	     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+> >	     db.Database.Migrate();
+> >	     DbSeeder.Seed(db);
+> >	 }
+> >	 
+> >	 app.UseSwagger();
+> >	 app.UseSwaggerUI();
+> >	 
+> >	 app.UseHttpsRedirection();
+> >	 app.MapControllers();
+> >	 
+> >	 app.Run();
 > 
 > 
 > 📁 This will create a file called:
 > 
-> meetingrooms.db
+>		 meetingrooms.db
 > 
 > 
 > in your project root.
 > 
 > 3. Ensure Models Are EF-Friendly
 > Models/MeetingRoom.cs
-> > namespace MeetingRoomReservationApi.Models;
-> > 
-> > public class MeetingRoom
-> > {
-> >     public Guid Id { get; set; } = Guid.NewGuid();
-> >     public string Name { get; set; } = string.Empty;
-> >     public int Capacity { get; set; }
-> > 
-> >     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
-> > }
+> >	 namespace MeetingRoomReservationApi.Models;
+> >	 
+> >	 public class MeetingRoom
+> >	 {
+> >	     public Guid Id { get; set; } = Guid.NewGuid();
+> >	     public string Name { get; set; } = string.Empty;
+> >	     public int Capacity { get; set; }
+> >	 
+> >	     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
+> >	 }
 > 
 > Models/Reservation.cs
-> > namespace MeetingRoomReservationApi.Models;
-> > 
-> > public class Reservation
-> > {
-> >     public Guid Id { get; set; } = Guid.NewGuid();
-> > 
-> >     public Guid MeetingRoomId { get; set; }
-> >     public MeetingRoom? MeetingRoom { get; set; }
-> > 
-> >     public DateTime StartUtc { get; set; }
-> >     public DateTime EndUtc { get; set; }
-> > 
-> >     public string ReservedBy { get; set; } = string.Empty;
-> > }
+> >	 namespace MeetingRoomReservationApi.Models;
+> >	 
+> >	 public class Reservation
+> >	 {
+> >	     public Guid Id { get; set; } = Guid.NewGuid();
+> >	 
+> >	     public Guid MeetingRoomId { get; set; }
+> >	     public MeetingRoom? MeetingRoom { get; set; }
+> >	 
+> >	     public DateTime StartUtc { get; set; }
+> >	     public DateTime EndUtc { get; set; }
+> >	 
+> >	     public string ReservedBy { get; set; } = string.Empty;
+> >	 }
 > 
 > 4. Update AppDbContext
 > Data/AppDbContext.cs
-> > using MeetingRoomReservationApi.Models;
-> > using Microsoft.EntityFrameworkCore;
-> > 
-> > namespace MeetingRoomReservationApi.Data;
-> > 
-> > public class AppDbContext : DbContext
-> > {
-> >     public AppDbContext(DbContextOptions<AppDbContext> options)
-> >         : base(options) { }
-> > 
-> >     public DbSet<MeetingRoom> MeetingRooms => Set<MeetingRoom>();
-> >     public DbSet<Reservation> Reservations => Set<Reservation>();
-> > 
-> >     protected override void OnModelCreating(ModelBuilder modelBuilder)
-> >     {
-> >         modelBuilder.Entity<MeetingRoom>()
-> >             .HasIndex(r => r.Name)
-> >             .IsUnique();
-> > 
-> >         modelBuilder.Entity<Reservation>()
-> >             .HasOne(r => r.MeetingRoom)
-> >             .WithMany(m => m.Reservations)
-> >             .HasForeignKey(r => r.MeetingRoomId)
-> >             .OnDelete(DeleteBehavior.Cascade);
-> >     }
-> > }
+> >	 using MeetingRoomReservationApi.Models;
+> >	 using Microsoft.EntityFrameworkCore;
+> >	 
+> >	 namespace MeetingRoomReservationApi.Data;
+> >	 
+> >	 public class AppDbContext : DbContext
+> >	 {
+> >	     public AppDbContext(DbContextOptions<AppDbContext> options)
+> >	         : base(options) { }
+> >	 
+> >	     public DbSet<MeetingRoom> MeetingRooms => Set<MeetingRoom>();
+> >	     public DbSet<Reservation> Reservations => Set<Reservation>();
+> >	 
+> >	     protected override void OnModelCreating(ModelBuilder modelBuilder)
+> >	     {
+> >	         modelBuilder.Entity<MeetingRoom>()
+> >	             .HasIndex(r => r.Name)
+> >	             .IsUnique();
+> >	 
+> >	         modelBuilder.Entity<Reservation>()
+> >	             .HasOne(r => r.MeetingRoom)
+> >	             .WithMany(m => m.Reservations)
+> >	             .HasForeignKey(r => r.MeetingRoomId)
+> >	             .OnDelete(DeleteBehavior.Cascade);
+> >	     }
+> >	 }
 > 
 > 5. Create the Database (Migrations)
 > 
 > Run these once:
 > 
-> > dotnet ef migrations add InitialCreate
-> > dotnet ef database update
+> >	 dotnet ef migrations add InitialCreate
+> >	 dotnet ef database update
 > 
 > 
 > You now have:
@@ -490,12 +490,12 @@ Local database that permanently saves reservations
 > 
 > Your existing validator is already correct for SQLite:
 > 
-> > await context.Reservations.AnyAsync(r =>
-> >     r.MeetingRoomId == reservation.MeetingRoomId &&
-> >     r.Id != reservation.Id &&
-> >     reservation.StartUtc < r.EndUtc &&
-> >     reservation.EndUtc > r.StartUtc
-> > );
+> >	 await context.Reservations.AnyAsync(r =>
+> >	     r.MeetingRoomId == reservation.MeetingRoomId &&
+> >	     r.Id != reservation.Id &&
+> >	     reservation.StartUtc < r.EndUtc &&
+> >	     reservation.EndUtc > r.StartUtc
+> >	 );
 > 
 > 
 > SQLite handles this cleanly.
@@ -523,3 +523,158 @@ Local database that permanently saves reservations
 > 🌍 Add timezone-safe reservations
 > 
 > Just say where you want to take it next 🚀
+
+### Populate the meeting room entity from reservation model automatically using the meetingroomid
+
+> Ah! You want EF Core to automatically populate the MeetingRoom navigation property from MeetingRoomId, even though you currently removed the navigation property. ✅
+> 
+> This is standard foreign key navigation behavior in EF Core: if a model has both a foreign key property and a navigation property, EF Core can automatically load the related entity using eager loading, lazy loading, or explicit loading.
+> 
+> Here’s a complete guide.
+> 
+> 1. Add the Navigation Property Back
+> 
+> Update your Reservation model:
+> 
+> >		using Microsoft.AspNetCore.Mvc.ModelBinding;
+> >		using Swashbuckle.AspNetCore.Annotations;
+> >		
+> >		namespace MeetingRoomReservationApi.Models;
+> >		
+> >		public class Reservation
+> >		{
+> >		    [BindNever]
+> >		    [SwaggerSchema(ReadOnly = true)]
+> >		    public Guid Id { get; private set; } = Guid.NewGuid();
+> >		
+> >		    // Foreign key
+> >		    public Guid MeetingRoomId { get; set; }
+> >		
+> >		    // Navigation property
+> >		    public MeetingRoom? MeetingRoom { get; set; } // EF will populate this
+> >		
+> >		    public DateTime StartUtc { get; set; }
+> >		    public DateTime EndUtc { get; set; }
+> >		
+> >		    public string ReservedBy { get; set; } = string.Empty;
+> >		}
+> 
+> 2. Configure EF Core Relationship
+> 
+> In AppDbContext:
+> 
+> >		protected override void OnModelCreating(ModelBuilder modelBuilder)
+> >		{
+> >		    modelBuilder.Entity<MeetingRoom>()
+> >		        .HasIndex(r => r.Name)
+> >		        .IsUnique();
+> >		
+> >		    modelBuilder.Entity<Reservation>()
+> >		        .HasOne(r => r.MeetingRoom)
+> >		        .WithMany()
+> >		        .HasForeignKey(r => r.MeetingRoomId)
+> >		        .OnDelete(DeleteBehavior.Restrict);
+> >		}
+> 
+> 
+> ✔ This tells EF Core:
+> 
+> Reservation.MeetingRoomId is the FK
+> 
+> Reservation.MeetingRoom is the navigation property
+> 
+> Delete of a room is restricted if it has reservations
+> 
+> 3. Load Room Info Automatically
+> 
+> There are three main options:
+> 
+> a) Eager Loading (Recommended for APIs)
+> >		var reservations = await _context.Reservations
+> >		    .Include(r => r.MeetingRoom)
+> >		    .ToListAsync();
+> 
+> 
+> ✅ EF Core automatically populates Reservation.MeetingRoom for each reservation.
+> 
+> Can also combine with Select if you want a DTO.
+> 
+> b) Lazy Loading (Optional)
+> 
+> Install EF Core Proxies:
+> 
+> >		dotnet add package Microsoft.EntityFrameworkCore.Proxies
+> 
+> 
+> Configure in Program.cs:
+> 
+> >		builder.Services.AddDbContext<AppDbContext>(options =>
+> >		    options.UseSqlite("Data Source=meetingrooms.db")
+> >		           .UseLazyLoadingProxies());
+> 
+> 
+> Update model navigation property:
+> 
+> >		public virtual MeetingRoom? MeetingRoom { get; set; }
+> 
+> 
+> Now Reservation.MeetingRoom is populated on first access automatically.
+> 
+> c) Explicit Loading
+> >		var reservation = await _context.Reservations.FirstAsync();
+> >		await _context.Entry(reservation).Reference(r => r.MeetingRoom).LoadAsync();
+> 
+> 
+> Useful if you want selective loading per reservation.
+> 
+> 4. Update DTO to Use Navigation Property
+> 
+> If you want to return room info in API:
+> 
+> >		var reservations = await _context.Reservations
+> >		    .Include(r => r.MeetingRoom)
+> >		    .Select(r => new ReservationWithRoomResponse
+> >		    {
+> >		        Id = r.Id,
+> >		        StartUtc = r.StartUtc,
+> >		        EndUtc = r.EndUtc,
+> >		        ReservedBy = r.ReservedBy,
+> >		        Room = new RoomInfo
+> >		        {
+> >		            Id = r.MeetingRoom!.Id,
+> >		            Name = r.MeetingRoom.Name,
+> >		            Capacity = r.MeetingRoom.Capacity
+> >		        }
+> >		    })
+> >		    .ToListAsync();
+> 
+> 
+> ✅ Simple, clean, and works with Swagger.
+> 
+> 5. Migration Note
+> 
+> Since you’re re-adding the navigation property:
+> 
+> Add a new migration:
+> 
+> >		dotnet ef migrations add AddMeetingRoomNavigation
+> >		dotnet ef database update
+> 
+> 
+> No schema changes needed because the foreign key already exists.
+> 
+> 6. TL;DR
+> 
+> Add navigation property: public MeetingRoom? MeetingRoom { get; set; }
+> 
+> Configure FK in OnModelCreating
+> 
+> Use Include() for eager loading or lazy loading if preferred
+> 
+> Update DTO to map the navigation property
+> 
+> Now EF Core automatically populates room info from MeetingRoomId for each reservation.
+> 
+> If you want, I can rewrite all reservation endpoints so that every reservation response automatically includes its room info, using Include() internally — no extra joins needed.
+> 
+> Do you want me to do that next?

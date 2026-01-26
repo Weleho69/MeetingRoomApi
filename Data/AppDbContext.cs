@@ -19,7 +19,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Reservation>()
             .HasOne(r => r.MeetingRoom)
-            .WithMany(m => m.Reservations)
+            .WithMany(r => r.Reservations)
             .HasForeignKey(r => r.MeetingRoomId)
             .OnDelete(DeleteBehavior.Cascade);
     }
