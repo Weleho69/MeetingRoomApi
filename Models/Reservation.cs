@@ -1,6 +1,8 @@
+using MeetingRoomAPI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Swashbuckle.AspNetCore.Annotations;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 
@@ -20,5 +22,7 @@ public class Reservation
     public DateTime StartUtc { get; set; }
     public DateTime EndUtc { get; set; }
 
-    public string ReservedBy { get; set; } = string.Empty;
+    [Required]
+    public string CustomerEmail { get; set; }
+    public Customer? Customer { get; set; }
 }

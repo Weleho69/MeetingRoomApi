@@ -24,13 +24,14 @@ public class ReservationsController : ControllerBase
     {
         return Ok(await _context.Reservations
                                 .Include(r => r.MeetingRoom)
+                                .Include(r => r.Customer)
                                 .Select(r => new Reservation 
                                 { 
                                     Id = r.Id,
                                     MeetingRoomId = r.MeetingRoomId,
                                     StartUtc = r.StartUtc,
                                     EndUtc = r.EndUtc,
-                                    ReservedBy = r.ReservedBy,
+                                    Customer = _context.Customers.Where(c => c.Email == r.CustomerEmail).FirstOrDefault(),
                                     MeetingRoom = _context.MeetingRooms.Where(m => m.Id == r.MeetingRoomId).FirstOrDefault() 
                                 }).ToListAsync());
     }
@@ -51,14 +52,16 @@ public class ReservationsController : ControllerBase
 
         var reservations = await _context.Reservations
             .Where(r => r.MeetingRoomId == roomId)
-            .OrderBy(r => r.StartUtc).Include(r => r.MeetingRoom)
+            .OrderBy(r => r.StartUtc)
+            .Include(r => r.MeetingRoom)
+            .Include(r => r.Customer)
             .Select(r => new Reservation
             {
                 Id = r.Id,
                 MeetingRoomId = r.MeetingRoomId,
                 StartUtc = r.StartUtc,
                 EndUtc = r.EndUtc,
-                ReservedBy = r.ReservedBy,
+                Customer = _context.Customers.Where(c => c.Email == r.CustomerEmail).FirstOrDefault(),
                 MeetingRoom = _context.MeetingRooms.Where(m => m.Id == r.MeetingRoomId).FirstOrDefault()
             })
             .ToListAsync();
@@ -138,4 +141,6 @@ public class ReservationsController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+
 }

@@ -678,3 +678,163 @@
 > If you want, I can rewrite all reservation endpoints so that every reservation response automatically includes its room info, using Include() internally — no extra joins needed.
 > 
 > Do you want me to do that next?
+
+### create customer model to replace ReservedBy, give the model email, name, phone and use the email as a foreign key in the reservation model
+
+> Perfect — now we’re moving from a string-based ReservedBy to a proper Customer entity and linking it via a foreign key.
+> We’ll use email as the FK. Here’s the clean, EF Core + SQLite approach.
+> 
+> 1️⃣ Create Customer Model
+> Models/Customer.cs
+> >		using System.ComponentModel.DataAnnotations;
+> >		
+> >		namespace MeetingRoomReservationApi.Models;
+> >		
+> >		public class Customer
+> >		{
+> >		    [Key]
+> >		    [EmailAddress]
+> >		    public string Email { get; set; } = string.Empty; // Primary key
+> >		
+> >		    [Required]
+> >		    public string Name { get; set; } = string.Empty;
+> >		
+> >		    [Phone]
+> >		    public string? Phone { get; set; }
+> >		}
+> 
+> 
+> ✅ Email is the PK and will serve as the FK in reservations.
+> ✅ Name is required, Phone optional.
+> 
+> 2️⃣ Update Reservation Model
+> Models/Reservation.cs
+> >		using Microsoft.AspNetCore.Mvc.ModelBinding;
+> >		using Swashbuckle.AspNetCore.Annotations;
+> >		
+> >		namespace MeetingRoomReservationApi.Models;
+> >		
+> >		public class Reservation
+> >		{
+> >		    [BindNever]
+> >		    [SwaggerSchema(ReadOnly = true)]
+> >		    public Guid Id { get; private set; } = Guid.NewGuid();
+> >		
+> >		    // Meeting Room
+> >		    public Guid MeetingRoomId { get; set; }
+> >		    public MeetingRoom? MeetingRoom { get; set; }
+> >		
+> >		    // Customer
+> >		    [Required]
+> >		    public string CustomerEmail { get; set; } = string.Empty; // FK
+> >		    public Customer? Customer { get; set; } // Navigation property
+> >		
+> >		    // Dates
+> >		    public DateTime StartUtc { get; set; }
+> >		    public DateTime EndUtc { get; set; }
+> >		}
+> 
+> 3️⃣ Update DbContext
+> Data/AppDbContext.cs
+> >		protected override void OnModelCreating(ModelBuilder modelBuilder)
+> >		{
+> >		    modelBuilder.Entity<MeetingRoom>()
+> >		        .HasIndex(r => r.Name)
+> >		        .IsUnique();
+> >		
+> >		    // Reservation → MeetingRoom FK
+> >		    modelBuilder.Entity<Reservation>()
+> >		        .HasOne(r => r.MeetingRoom)
+> >		        .WithMany()
+> >		        .HasForeignKey(r => r.MeetingRoomId)
+> >		        .OnDelete(DeleteBehavior.Restrict);
+> >		
+> >		    // Reservation → Customer FK via Email
+> >		    modelBuilder.Entity<Reservation>()
+> >		        .HasOne(r => r.Customer)
+> >		        .WithMany()
+> >		        .HasForeignKey(r => r.CustomerEmail)
+> >		        .OnDelete(DeleteBehavior.Restrict);
+> >		
+> >		    // Customer email is PK
+> >		    modelBuilder.Entity<Customer>()
+> >		        .HasKey(c => c.Email);
+> >		}
+> 
+> 4️⃣ Update DTOs for API Responses
+> Dtos/ReservationWithCustomerResponse.cs
+> >		namespace MeetingRoomReservationApi.Dtos;
+> >		
+> >		public class ReservationWithCustomerResponse
+> >		{
+> >		    public Guid Id { get; set; }
+> >		    public DateTime StartUtc { get; set; }
+> >		    public DateTime EndUtc { get; set; }
+> >		
+> >		    public RoomInfo Room { get; set; } = new RoomInfo();
+> >		    public CustomerInfo Customer { get; set; } = new CustomerInfo();
+> >		}
+> >		
+> >		public class CustomerInfo
+> >		{
+> >		    public string Email { get; set; } = string.Empty;
+> >		    public string Name { get; set; } = string.Empty;
+> >		    public string? Phone { get; set; }
+> >		}
+> 
+> 5️⃣ Example Query for Reservations with Room + Customer Info
+> >		var reservations = await _context.Reservations
+> >		    .Include(r => r.MeetingRoom)
+> >		    .Include(r => r.Customer)
+> >		    .OrderBy(r => r.StartUtc)
+> >		    .Select(r => new ReservationWithCustomerResponse
+> >		    {
+> >		        Id = r.Id,
+> >		        StartUtc = r.StartUtc,
+> >		        EndUtc = r.EndUtc,
+> >		        Room = new RoomInfo
+> >		        {
+> >		            Id = r.MeetingRoom!.Id,
+> >		            Name = r.MeetingRoom.Name,
+> >		            Capacity = r.MeetingRoom.Capacity
+> >		        },
+> >		        Customer = new CustomerInfo
+> >		        {
+> >		            Email = r.Customer!.Email,
+> >		            Name = r.Customer.Name,
+> >		            Phone = r.Customer.Phone
+> >		        }
+> >		    })
+> >		    .ToListAsync();
+> 
+> 6️⃣ Migrations
+> 
+> Remove any previous migration that included ReservedBy.
+> 
+> Create a new migration:
+> 
+> >		dotnet ef migrations add AddCustomerEntity
+> >		dotnet ef database update
+> 
+> 
+> EF Core will create a Customers table.
+> 
+> Reservations now reference the customer via CustomerEmail FK.
+> 
+> ✅ Notes
+> 
+> CustomerEmail is required in Reservation → prevents orphan reservations.
+> 
+> Include(r => r.Customer) ensures navigation is populated.
+> 
+> You can still seed Customers and MeetingRooms separately.
+> 
+> If you want, I can now rewrite all reservation endpoints so that:
+> 
+> POST / PUT requests take customer email instead of ReservedBy
+> 
+> Responses automatically return full room + customer info
+> 
+> Validation ensures customer exists before reservation is created
+> 
+> Do you want me to do that next?
