@@ -9,6 +9,10 @@ namespace MeetingRoomAPI.Models
 {
     public class Customer
     {
+        [JsonPropertyName("id")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        [BindNever]
+        [SwaggerSchema(ReadOnly = true)]
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 

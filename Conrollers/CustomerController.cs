@@ -3,6 +3,7 @@ using MeetingRoomApi.Models;
 using MeetingRoomAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace MeetingRoomAPI.Conrollers
 {
@@ -60,15 +61,25 @@ namespace MeetingRoomAPI.Conrollers
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             var exists = await _context.Customers.AnyAsync(c => c.Email == email);
-            if (!exists)
-                return NotFound();
+           
 
             try
             {
-                _context.Customers.Update(updated);
+                var customer = await _context.Customers.Where(c => c.Email == email).FirstOrDefaultAsync();
+                if (customer == null)
+                    return NotFound();
+
+                if (updated.Email != customer.Email)
+                    customer.Email = updated.Email;
+                if(updated.Name != customer.Name)
+                    customer.Name = updated.Name;
+                if(updated.Phone != customer.Phone)
+                    customer.Phone = updated.Phone;
+
+                _context.Customers.Update(customer);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return Ok(updated);
+                return Ok(customer);
             }catch  (Exception ex)
             {
                 await transaction.RollbackAsync();
