@@ -19,7 +19,12 @@ namespace MeetingRoomAPI.Migrations
 
             modelBuilder.Entity("MeetingRoomAPI.Models.Customer", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -29,7 +34,10 @@ namespace MeetingRoomAPI.Migrations
                     b.Property<string>("Phone")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Email");
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("Customers");
                 });
@@ -62,8 +70,7 @@ namespace MeetingRoomAPI.Migrations
                         .HasColumnType("TEXT")
                         .HasAnnotation("Relational:JsonPropertyName", "id");
 
-                    b.Property<string>("CustomerEmail")
-                        .IsRequired()
+                    b.Property<Guid>("CustomerId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("EndUtc")
@@ -77,7 +84,7 @@ namespace MeetingRoomAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerEmail");
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("MeetingRoomId");
 
@@ -88,7 +95,7 @@ namespace MeetingRoomAPI.Migrations
                 {
                     b.HasOne("MeetingRoomAPI.Models.Customer", "Customer")
                         .WithMany()
-                        .HasForeignKey("CustomerEmail")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

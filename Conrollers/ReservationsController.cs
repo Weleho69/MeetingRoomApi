@@ -1,10 +1,13 @@
 using MeetingRoomApi.Data;
 using MeetingRoomApi.Helpers;
 using MeetingRoomApi.Models;
+using MeetingRoomAPI.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using System;
 using System.Data.Common;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MeetingRoomApi.Controllers;
 
@@ -25,21 +28,53 @@ public class ReservationsController : ControllerBase
         return Ok(await _context.Reservations
                                 .Include(r => r.MeetingRoom)
                                 .Include(r => r.Customer)
-                                .Select(r => new Reservation 
-                                { 
+                                .OrderBy(r => r.StartUtc)
+                                .Select(r => new ReservationWithCustomer
+                                {
                                     Id = r.Id,
-                                    MeetingRoomId = r.MeetingRoomId,
                                     StartUtc = r.StartUtc,
                                     EndUtc = r.EndUtc,
-                                    Customer = _context.Customers.Where(c => c.Email == r.CustomerEmail).FirstOrDefault(),
-                                    MeetingRoom = _context.MeetingRooms.Where(m => m.Id == r.MeetingRoomId).FirstOrDefault() 
+                                    Customer = new CustomerInfo
+                                    {
+                                        email = r.Customer!.Email,
+                                        phone = r.Customer.Phone,
+                                        name = r.Customer.Name
+                                    },
+                                    Room = new RoomInfo
+                                    {
+                                        id = r.MeetingRoom!.Id,
+                                        name = r.MeetingRoom.Name,
+                                        capacity = r.MeetingRoom.Capacity
+
+                                    }
                                 }).ToListAsync());
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id)
     {
-        var reservation = await _context.Reservations.FindAsync(id);
+        var reservation = await _context.Reservations
+                                .Include(r => r.MeetingRoom)
+                                .Include(r => r.Customer)
+                                .Select(r => new ReservationWithCustomer
+        {
+            Id = r.Id,
+            StartUtc = r.StartUtc,
+            EndUtc = r.EndUtc,
+            Customer = new CustomerInfo
+            {
+                email = r.Customer!.Email,
+                phone = r.Customer.Phone,
+                name = r.Customer.Name
+            },
+            Room = new RoomInfo
+            {
+                id = r.MeetingRoom!.Id,
+                name = r.MeetingRoom.Name,
+                capacity = r.MeetingRoom.Capacity
+
+            }
+        }).FirstOrDefaultAsync();
         return reservation is null ? NotFound() : Ok(reservation);
     }
 
@@ -55,14 +90,24 @@ public class ReservationsController : ControllerBase
             .OrderBy(r => r.StartUtc)
             .Include(r => r.MeetingRoom)
             .Include(r => r.Customer)
-            .Select(r => new Reservation
+            .Select(r => new ReservationWithCustomer
             {
                 Id = r.Id,
-                MeetingRoomId = r.MeetingRoomId,
                 StartUtc = r.StartUtc,
                 EndUtc = r.EndUtc,
-                Customer = _context.Customers.Where(c => c.Email == r.CustomerEmail).FirstOrDefault(),
-                MeetingRoom = _context.MeetingRooms.Where(m => m.Id == r.MeetingRoomId).FirstOrDefault()
+                Customer = new CustomerInfo
+                {
+                    email = r.Customer!.Email,
+                    phone = r.Customer.Phone,
+                    name = r.Customer.Name
+                },
+                Room = new RoomInfo
+                {
+                    id = r.MeetingRoom!.Id,
+                    name = r.MeetingRoom.Name,
+                    capacity = r.MeetingRoom.Capacity
+
+                }
             })
             .ToListAsync();
 
@@ -70,19 +115,31 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Reservation reservation)
+    public async Task<IActionResult> Create(ReservationResponse reservationResponse)
     {
         //Added expanded error handling via transactions in case of interruption 
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            await ReservationValidator.ValidateAsync(_context, reservation);
+            var customer = await _context.Customers.Where(c => c.Email == reservationResponse.CustomerEmail).FirstOrDefaultAsync();
+            if (customer == null)
+            {
+                return NotFound("No user found with email");
+            }
 
-            _context.Reservations.Add(reservation);
+            Reservation newReservation = new Reservation
+            {
+                MeetingRoomId = reservationResponse.MeetingRoomId,
+                EndUtc = reservationResponse.EndUtc,
+                StartUtc = reservationResponse.StartUtc,
+                CustomerId = customer.Id
+            };
+            await ReservationValidator.ValidateAsync(_context, newReservation);
+            _context.Reservations.Add(newReservation);
             await _context.SaveChangesAsync();
 
             await transaction.CommitAsync();
-            return CreatedAtAction(nameof(Get), new { id = reservation.Id }, reservation);
+            return CreatedAtAction(nameof(Get), new { id = newReservation.Id }, newReservation);
         }
         catch (ArgumentException ex)
         {
@@ -92,7 +149,7 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, Reservation updated)
+    public async Task<IActionResult> Update(Guid id, ReservationResponse updated)
     {
         //Added expanded error handling via transactions in case of interruption 
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -103,11 +160,26 @@ public class ReservationsController : ControllerBase
         if (!exists)
             return NotFound();
 
+        var customer = await _context.Customers.Where(c => c.Email == updated.CustomerEmail).FirstOrDefaultAsync();
+        if (customer == null)
+        {
+            return NotFound("No user found with email");
+        }
+
         try
         {
-            await ReservationValidator.ValidateAsync(_context, updated);
 
-            _context.Reservations.Update(updated);
+            Reservation newReservation = new Reservation
+            {
+                MeetingRoomId = updated.MeetingRoomId,
+                EndUtc = updated.EndUtc,
+                StartUtc = updated.StartUtc,
+                CustomerId = customer.Id
+            };
+            await ReservationValidator.ValidateAsync(_context, newReservation);
+            
+
+            _context.Reservations.Update(newReservation);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             return NoContent();

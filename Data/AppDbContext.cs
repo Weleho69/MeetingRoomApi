@@ -31,11 +31,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Reservation>()
             .HasOne(r => r.Customer)
             .WithMany()
-            .HasForeignKey(r => r.CustomerEmail)
+            .HasForeignKey(r => r.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Customer email is PK
+        // Customer email is FK 
         modelBuilder.Entity<Customer>()
-            .HasKey(c => c.Email);
+            .HasIndex(c => c.Email).IsUnique();
     }
 }

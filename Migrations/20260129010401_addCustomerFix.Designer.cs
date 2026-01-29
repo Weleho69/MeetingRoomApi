@@ -11,14 +11,39 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MeetingRoomAPI.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260126172806_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260129010401_addCustomerFix")]
+    partial class addCustomerFix
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.23");
+
+            modelBuilder.Entity("MeetingRoomAPI.Models.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Customers");
+                });
 
             modelBuilder.Entity("MeetingRoomApi.Models.MeetingRoom", b =>
                 {
@@ -45,6 +70,10 @@ namespace MeetingRoomAPI.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasAnnotation("Relational:JsonPropertyName", "id");
+
+                    b.Property<Guid>("CustomerId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("EndUtc")
@@ -53,14 +82,12 @@ namespace MeetingRoomAPI.Migrations
                     b.Property<Guid>("MeetingRoomId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ReservedBy")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("StartUtc")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("MeetingRoomId");
 
@@ -69,11 +96,19 @@ namespace MeetingRoomAPI.Migrations
 
             modelBuilder.Entity("MeetingRoomApi.Models.Reservation", b =>
                 {
+                    b.HasOne("MeetingRoomAPI.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("MeetingRoomApi.Models.MeetingRoom", "MeetingRoom")
                         .WithMany("Reservations")
                         .HasForeignKey("MeetingRoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Customer");
 
                     b.Navigation("MeetingRoom");
                 });

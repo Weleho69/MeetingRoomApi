@@ -1,4 +1,5 @@
 ﻿using MeetingRoomApi.Data;
+using MeetingRoomApi.Models;
 using MeetingRoomAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -58,8 +59,6 @@ namespace MeetingRoomAPI.Conrollers
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if(email != updated.Email)
-                updated.Email = email;
             var exists = await _context.Customers.AnyAsync(c => c.Email == email);
             if (!exists)
                 return NotFound();
@@ -88,8 +87,10 @@ namespace MeetingRoomAPI.Conrollers
 
             try
             {
-                var user = await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);
-                _context.Customers.Remove(user);
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);
+                var reservations = await _context.Reservations.Where(r => r.CustomerId == customer.Id).ToListAsync();
+                _context.Reservations.RemoveRange(reservations);
+                _context.Customers.Remove(customer);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return NoContent();

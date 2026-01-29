@@ -1,4 +1,5 @@
 using MeetingRoomAPI.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Swashbuckle.AspNetCore.Annotations;
 using System;
@@ -17,12 +18,16 @@ public class Reservation
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid MeetingRoomId { get; set; }
+
+    [JsonIgnore]
     public MeetingRoom? MeetingRoom { get; set; }
 
     public DateTime StartUtc { get; set; }
     public DateTime EndUtc { get; set; }
 
-    [Required]
-    public string CustomerEmail { get; set; }
+    [JsonIgnore]
+    public Guid CustomerId { get; set; }
+
+    [JsonIgnore]
     public Customer? Customer { get; set; }
 }
