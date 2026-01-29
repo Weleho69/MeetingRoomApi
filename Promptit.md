@@ -838,3 +838,153 @@
 > Validation ensures customer exists before reservation is created
 > 
 > Do you want me to do that next?
+
+### Customer Object in reservations is creating a new customer every time a unique email is entered into the customer object in input of a reservation post request. How do i stop that?
+
+> Yep — this is exactly how EF Core is designed to behave, and you’re right to stop it 👍
+> What’s happening is EF sees a Customer object in the POST body and assumes it’s a NEW entity.
+> 
+> Let’s lock this down cleanly and professionally.
+> 
+> 🔍 Why this happens
+> 
+> When you POST a reservation like this:
+> 
+> >	{
+> >	  "meetingRoomId": "…",
+> >	  "customer": {
+> >	    "email": "alice@example.com",
+> >	    "name": "Alice",
+> >	    "phone": "123"
+> >	  },
+> >	  "startUtc": "...",
+> >	  "endUtc": "..."
+> >	}
+> 
+> 
+> EF Core says:
+> 
+> “Oh, a Customer object! I’ll INSERT it.”
+> 
+> Even if the email already exists, EF does not automatically check for existing rows unless you explicitly tell it to.
+> 
+> ✅ Correct API Design (Recommended)
+> ❌ Never accept navigation objects in POST bodies
+> ✅ Accept foreign keys only
+> Input DTO (what Swagger should accept)
+> >	public class CreateReservationRequest
+> >	{
+> >	    public Guid MeetingRoomId { get; set; }
+> >	
+> >	    [Required, EmailAddress]
+> >	    public string CustomerEmail { get; set; } = string.Empty;
+> >	
+> >	    public DateTime StartUtc { get; set; }
+> >	    public DateTime EndUtc { get; set; }
+> >	}
+> 
+> 
+> 🚫 No Customer object here
+> 🚫 No accidental inserts
+> ✅ Clean API contract
+> 
+> 🧱 Reservation Entity (important change)
+> >	public class Reservation
+> >	{
+> >	    public Guid Id { get; private set; } = Guid.NewGuid();
+> >	
+> >	    public Guid MeetingRoomId { get; set; }
+> >	    public MeetingRoom? MeetingRoom { get; set; }
+> >	
+> >	    public string CustomerEmail { get; set; } = string.Empty;
+> >	
+> >	    [JsonIgnore] // ⬅ prevents binding from JSON input
+> >	    public Customer? Customer { get; set; }
+> >	
+> >	    public DateTime StartUtc { get; set; }
+> >	    public DateTime EndUtc { get; set; }
+> >	}
+> 
+> 
+> 🔥 Key move:
+> [JsonIgnore] on Customer prevents Swagger & model binding from accepting it in requests.
+> 
+> 🧠 Controller Logic (this is the real fix)
+> [HttpPost]
+> >	public async Task<IActionResult> Create(CreateReservationRequest request)
+> >	{
+> >	    // 1️⃣ Validate customer exists
+> >	    var customerExists = await _context.Customers
+> >	        .AnyAsync(c => c.Email == request.CustomerEmail);
+> >	
+> >	    if (!customerExists)
+> >	        return BadRequest($"Customer with email '{request.CustomerEmail}' does not exist.");
+> >	
+> >	    // 2️⃣ Validate room exists
+> >	    var roomExists = await _context.MeetingRooms
+> >	        .AnyAsync(r => r.Id == request.MeetingRoomId);
+> >	
+> >	    if (!roomExists)
+> >	        return BadRequest("Meeting room does not exist.");
+> >	
+> >	    // 3️⃣ Create reservation using FK only
+> >	    var reservation = new Reservation
+> >	    {
+> >	        MeetingRoomId = request.MeetingRoomId,
+> >	        CustomerEmail = request.CustomerEmail,
+> >	        StartUtc = request.StartUtc,
+> >	        EndUtc = request.EndUtcS
+> >	    };
+> >	
+> >	    _context.Reservations.Add(reservation);
+> >	    await _context.SaveChangesAsync();
+> >	
+> >	    return CreatedAtAction(nameof(GetById), new { id = reservation.Id }, reservation);
+> >	}
+> 
+> 
+> 🚫 No customer insertion
+> 🚫 No EF guessing
+> ✅ Full control
+> 
+> 🧪 If You MUST Accept Customer Object (Not Recommended)
+> 
+> If you absolutely must accept a customer object, you must attach it manually:
+> 
+> _context.Customers.Attach(reservation.Customer);
+> 
+> 
+> ⚠️ This tells EF:
+> 
+> “This already exists — DO NOT INSERT”
+> 
+> But honestly?
+> 👉 DTO + FK-only input is the correct approach
+> 
+> ✅ Best Practice Summary
+> Problem	Correct Solution
+> EF creates new customers	Don’t accept Customer in POST
+> Swagger shows customer input	Use DTO + [JsonIgnore]
+> Duplicate customers	Validate email exists first
+> Clean API	FK-only input, rich output DTOs
+> 🏆 Final Architecture (Industry-Standard)
+> 
+> POST /reservations → accepts CustomerEmail
+> 
+> POST /customers → creates customers
+> 
+> GET /reservations → returns customer + room info
+> 
+> No cascade inserts
+> 
+> No accidental duplicates
+> 
+> If you want, I can:
+> 
+> Lock Swagger so it never shows Customer on input
+> 
+> Add unique constraints & validation
+> 
+> Split controllers cleanly (CustomersController, ReservationsController)
+> 
+> Just say the word 🚀
