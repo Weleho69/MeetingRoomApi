@@ -850,16 +850,16 @@
 > 
 > When you POST a reservation like this:
 > 
-> >	{
-> >	  "meetingRoomId": "…",
-> >	  "customer": {
-> >	    "email": "alice@example.com",
-> >	    "name": "Alice",
-> >	    "phone": "123"
-> >	  },
-> >	  "startUtc": "...",
-> >	  "endUtc": "..."
-> >	}
+> >		{
+> >		  "meetingRoomId": "…",
+> >		  "customer": {
+> >		    "email": "alice@example.com",
+> >		    "name": "Alice",
+> >		    "phone": "123"
+> >		  },
+> >		  "startUtc": "...",
+> >		  "endUtc": "..."
+> >		}
 > 
 > 
 > EF Core says:
@@ -872,16 +872,16 @@
 > ❌ Never accept navigation objects in POST bodies
 > ✅ Accept foreign keys only
 > Input DTO (what Swagger should accept)
-> >	public class CreateReservationRequest
-> >	{
-> >	    public Guid MeetingRoomId { get; set; }
-> >	
-> >	    [Required, EmailAddress]
-> >	    public string CustomerEmail { get; set; } = string.Empty;
-> >	
-> >	    public DateTime StartUtc { get; set; }
-> >	    public DateTime EndUtc { get; set; }
-> >	}
+> >		public class CreateReservationRequest
+> >		{
+> >		    public Guid MeetingRoomId { get; set; }
+> >		
+> >		    [Required, EmailAddress]
+> >		    public string CustomerEmail { get; set; } = string.Empty;
+> >		
+> >		    public DateTime StartUtc { get; set; }
+> >		    public DateTime EndUtc { get; set; }
+> >		}
 > 
 > 
 > 🚫 No Customer object here
@@ -889,21 +889,21 @@
 > ✅ Clean API contract
 > 
 > 🧱 Reservation Entity (important change)
-> >	public class Reservation
-> >	{
-> >	    public Guid Id { get; private set; } = Guid.NewGuid();
-> >	
-> >	    public Guid MeetingRoomId { get; set; }
-> >	    public MeetingRoom? MeetingRoom { get; set; }
-> >	
-> >	    public string CustomerEmail { get; set; } = string.Empty;
-> >	
-> >	    [JsonIgnore] // ⬅ prevents binding from JSON input
-> >	    public Customer? Customer { get; set; }
-> >	
-> >	    public DateTime StartUtc { get; set; }
-> >	    public DateTime EndUtc { get; set; }
-> >	}
+> >		public class Reservation
+> >		{
+> >		    public Guid Id { get; private set; } = Guid.NewGuid();
+> >		
+> >		    public Guid MeetingRoomId { get; set; }
+> >		    public MeetingRoom? MeetingRoom { get; set; }
+> >		
+> >		    public string CustomerEmail { get; set; } = string.Empty;
+> >		
+> >		    [JsonIgnore] // ⬅ prevents binding from JSON input
+> >		    public Customer? Customer { get; set; }
+> >		
+> >		    public DateTime StartUtc { get; set; }
+> >		    public DateTime EndUtc { get; set; }
+> >		}
 > 
 > 
 > 🔥 Key move:
@@ -911,36 +911,36 @@
 > 
 > 🧠 Controller Logic (this is the real fix)
 > [HttpPost]
-> >	public async Task<IActionResult> Create(CreateReservationRequest request)
-> >	{
-> >	    // 1️⃣ Validate customer exists
-> >	    var customerExists = await _context.Customers
-> >	        .AnyAsync(c => c.Email == request.CustomerEmail);
-> >	
-> >	    if (!customerExists)
-> >	        return BadRequest($"Customer with email '{request.CustomerEmail}' does not exist.");
-> >	
-> >	    // 2️⃣ Validate room exists
-> >	    var roomExists = await _context.MeetingRooms
-> >	        .AnyAsync(r => r.Id == request.MeetingRoomId);
-> >	
-> >	    if (!roomExists)
-> >	        return BadRequest("Meeting room does not exist.");
-> >	
-> >	    // 3️⃣ Create reservation using FK only
-> >	    var reservation = new Reservation
-> >	    {
-> >	        MeetingRoomId = request.MeetingRoomId,
-> >	        CustomerEmail = request.CustomerEmail,
-> >	        StartUtc = request.StartUtc,
-> >	        EndUtc = request.EndUtcS
-> >	    };
-> >	
-> >	    _context.Reservations.Add(reservation);
-> >	    await _context.SaveChangesAsync();
-> >	
-> >	    return CreatedAtAction(nameof(GetById), new { id = reservation.Id }, reservation);
-> >	}
+> > 	public async Task<IActionResult> Create(CreateReservationRequest request)
+> > 	{
+> > 		// 1️⃣ Validate customer exists
+> > 		var customerExists = await _context.Customers
+> > 		    .AnyAsync(c => c.Email == request.CustomerEmail);
+> > 		
+> > 		if (!customerExists)
+> > 		    return BadRequest($"Customer with email '{request.CustomerEmail}' does not exist.");
+> > 		
+> > 		// 2️⃣ Validate room exists
+> > 		var roomExists = await _context.MeetingRooms
+> > 		    .AnyAsync(r => r.Id == request.MeetingRoomId);
+> > 		
+> > 		if (!roomExists)
+> > 		    return BadRequest("Meeting room does not exist.");
+> > 		
+> > 		// 3️⃣ Create reservation using FK only
+> > 		var reservation = new Reservation
+> > 		{
+> > 		    MeetingRoomId = request.MeetingRoomId,
+> > 		    CustomerEmail = request.CustomerEmail,
+> > 		    StartUtc = request.StartUtc,
+> >				EndUtc = request.EndUtcS
+> >			};
+> >		
+> >		_context.Reservations.Add(reservation);
+> >		await _context.SaveChangesAsync();
+> >		
+> >		return CreatedAtAction(nameof(GetById), new { id = reservation.Id }, reservation);
+> >		}
 > 
 > 
 > 🚫 No customer insertion
