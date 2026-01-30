@@ -168,21 +168,18 @@ public class ReservationsController : ControllerBase
 
         try
         {
-
-            Reservation newReservation = new Reservation
-            {
-                MeetingRoomId = updated.MeetingRoomId,
-                EndUtc = updated.EndUtc,
-                StartUtc = updated.StartUtc,
-                CustomerId = customer.Id
-            };
-            await ReservationValidator.ValidateAsync(_context, newReservation);
+            var reservation = await _context.Reservations.Where(r => r.Id == id).FirstOrDefaultAsync();
+            reservation.CustomerId = customer.Id;
+            reservation.MeetingRoomId = updated.MeetingRoomId;
+            reservation.StartUtc = updated.StartUtc;
+            reservation.EndUtc = updated.EndUtc;
+            await ReservationValidator.ValidateAsync(_context, reservation);
             
 
-            _context.Reservations.Update(newReservation);
+            _context.Reservations.Update(reservation);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-            return NoContent();
+            return Ok(reservation);
         }
         catch (ArgumentException ex)
         {
